@@ -1,0 +1,19 @@
+name: ChilovePlugin
+version: '${version}'
+main: ru.peef.chilove.ChiloveMain
+api-version: '1.19'
+depend: [PlaceholderAPI, ProtocolLib]
+load: STARTUP
+author: Peef
+permissions:
+  chilove.commands.admin:
+    default: op
+  chilove.commands.cnpc:
+    default: op
+  chilove.fly:
+    default: op
+commands:
+  admin:
+    usage: "/<command>"
+  cnpc:
+    usage: "/<command>"

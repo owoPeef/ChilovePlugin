@@ -5,9 +5,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.permissions.PermissionAttachment;
@@ -26,46 +24,61 @@ public class PlayerEvents implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        World world = player.getWorld();
+        String playerIP = String.valueOf(player.getAddress().getAddress()).replace("/", "");
 
-        ChilovePlayer chilovePlayer = new ChilovePlayer(player, true);
-        ChilovePlayerManager.addChilovePlayer(chilovePlayer);
-
-        for (String permission: chilovePlayer.getGroup().getPermissions()) {
-            PermissionAttachment attachment = player.addAttachment(plugin);
-            perms.put(player.getUniqueId(), attachment);
-
-            PermissionAttachment pperms = perms.get(player.getUniqueId());
-            pperms.setPermission(permission, true);
+        int countOfSimilarAddresses = 0;
+        for (ChilovePlayer chilovePlayer: ChilovePlayerManager.getChilovePlayers()) {
+            Player cPlayer = chilovePlayer.getPlayer();
+            String cPlayerIP = String.valueOf(cPlayer.getAddress().getAddress()).replace("/", "");
+            if (cPlayerIP.equals(playerIP)) countOfSimilarAddresses++;
         }
 
-        if (chilovePlayer.getGroup().hasPermission("chilove.fly") && ChiloveMain.isFlyEnabled) {
-            player.setAllowFlight(true);
-            player.setFlying(true);
-        }
+        if (countOfSimilarAddresses > 2) {
+            player.kickPlayer(Utils.format("&cМаксимальное количество игроков с одинаковым IP недопустимо!"));
+        } else {
+            World world = player.getWorld();
 
-        if (ChiloveMain.needConfirmHash) Utils.sendConfirmationCode(player, System.currentTimeMillis());
-        else ChilovePlayerManager.getChilovePlayer(player).setConfirmed(true);
+            ChilovePlayer chilovePlayer = new ChilovePlayer(player, true);
+            ChilovePlayerManager.addChilovePlayer(chilovePlayer);
 
-        for (String permission: chilovePlayer.getGroup().getPermissions()) {
-            PermissionAttachment attachment = player.addAttachment(plugin);
-            perms.put(player.getUniqueId(), attachment);
+            for (String permission: chilovePlayer.getGroup().getPermissions()) {
+                PermissionAttachment attachment = player.addAttachment(plugin);
+                perms.put(player.getUniqueId(), attachment);
 
-            PermissionAttachment pperms = perms.get(player.getUniqueId());
-            pperms.setPermission(permission, true);
-        }
+                PermissionAttachment pperms = perms.get(player.getUniqueId());
+                pperms.setPermission(permission, true);
+            }
+
+            if (chilovePlayer.getGroup().hasPermission("chilove.fly") && ChiloveMain.isFlyEnabled) {
+                player.setAllowFlight(true);
+                player.setFlying(true);
+            }
+
+            if (ChiloveMain.needConfirmHash) Utils.sendConfirmationCode(player, System.currentTimeMillis());
+            else ChilovePlayerManager.getChilovePlayer(player).setConfirmed(true);
+
+            for (String permission: chilovePlayer.getGroup().getPermissions()) {
+                PermissionAttachment attachment = player.addAttachment(plugin);
+                perms.put(player.getUniqueId(), attachment);
+
+                PermissionAttachment pperms = perms.get(player.getUniqueId());
+                pperms.setPermission(permission, true);
+            }
 
 
-        String message = Utils.getString(ChiloveMain.joinFormat, player, world);
-        chilovePlayer.updateTab();
-        new DisplayName(player).setPlayerPrefix(Utils.getString(ChiloveMain.displayPrefixFormat, player, world), chilovePlayer.getGroup().getDisplayColor());
+            String message = Utils.getString(ChiloveMain.joinFormat, player, world);
+            chilovePlayer.updateTab();
+            new DisplayName(player).setPlayerPrefix(Utils.getString(ChiloveMain.displayPrefixFormat, player, world), chilovePlayer.getGroup().getDisplayColor());
 
-        event.setJoinMessage("");
-        if (ChiloveMain.joinMessageEnabled) {
-            for (Player world_player: world.getPlayers()) {
-                world_player.sendMessage(message);
+            event.setJoinMessage("");
+            if (ChiloveMain.joinMessageEnabled) {
+                for (Player world_player: world.getPlayers()) {
+                    world_player.sendMessage(message);
+                }
             }
         }
+
+//        chilovePlayer.acceptSkin();
     }
 
     @EventHandler
@@ -114,47 +127,5 @@ public class PlayerEvents implements Listener {
             }
         }
         ChiloveMain.playerHearMessage.clear();
-    }
-
-    @EventHandler
-    public void BlockClick(PlayerInteractEvent event){
-        Player p = event.getPlayer();
-        ChilovePlayer player = ChilovePlayerManager.getChilovePlayer(p);
-        Action action = event.getAction();
-
-        if (event.getClickedBlock() != null) {
-            int clickX = event.getClickedBlock().getX();
-            int clickY = event.getClickedBlock().getY();
-            int clickZ = event.getClickedBlock().getZ();
-
-            if (player != null && player.selectionToolEnabled && p.hasPermission("chilove.selection_tool")) {
-                if (action == Action.LEFT_CLICK_BLOCK || action == Action.RIGHT_CLICK_BLOCK) {
-                    if (action == Action.LEFT_CLICK_BLOCK
-                            && (player.selection.getFirstPositionX() != clickX
-                            || player.selection.getFirstPositionY() != clickY
-                            || player.selection.getFirstPositionZ() != clickZ
-                    )) {
-                        player.selection.setPosition(true, "x", clickX);
-                        player.selection.setPosition(true, "y", clickY);
-                        player.selection.setPosition(true, "z", clickZ);
-
-                        p.sendMessage("§aДля позиции 1 выбран блок " + clickX + " " + clickY + " " + clickZ);
-                    }
-
-                    if (action == Action.RIGHT_CLICK_BLOCK
-                            && (player.selection.getSecondPositionX() != clickX
-                            || player.selection.getSecondPositionY() != clickY
-                            || player.selection.getSecondPositionZ() != clickZ
-                    )) {
-                        player.selection.setPosition(false, "x", clickX);
-                        player.selection.setPosition(false, "y", clickY);
-                        player.selection.setPosition(false, "z", clickZ);
-
-                        p.sendMessage("§aДля позиции 2 выбран блок " + clickX + " " + event.getClickedBlock().getY() + " " + clickZ);
-                    }
-                    event.setCancelled(true);
-                }
-            }
-        }
     }
 }
